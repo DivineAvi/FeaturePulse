@@ -6,6 +6,8 @@ load_dotenv()
 
 @dataclass
 class Config:
+    FRONTEND_URL:str = os.getenv('FRONTEND_URL',"");
+    
     # OpenAI Configuration
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     

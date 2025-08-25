@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_SERVER_API_URL || 'http://localhost:8000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -26,6 +26,30 @@ export interface CrawlRequest {
   competitor_id?: string;
   urls?: string[];
   mode?: string;
+}
+
+// Settings types
+export interface NotificationSettings {
+  email: boolean;
+  slack: boolean;
+  realtime: boolean;
+}
+
+export interface TrackingSettings {
+  frequency: string;
+  max_pages: number;
+  smart_scroll: boolean;
+}
+
+export interface DataManagementSettings {
+  retention_period: string;
+  auto_cleanup: boolean;
+}
+
+export interface UserSettings {
+  notifications: NotificationSettings;
+  tracking: TrackingSettings;
+  data_management: DataManagementSettings;
 }
 
 // API functions
@@ -107,6 +131,41 @@ export const apiService = {
 
   generateReport: async () => {
     const response = await api.post('/reports/generate');
+    return response.data;
+  },
+
+  downloadReport: async (reportId: string) => {
+    const response = await api.get(`/reports/${reportId}/download`, {
+      responseType: 'blob'
+    });
+    return response;
+  },
+
+  downloadAllReports: async () => {
+    const response = await api.get('/reports/download/all', {
+      responseType: 'blob'
+    });
+    return response;
+  },
+
+  // Settings
+  getSettings: async (): Promise<UserSettings> => {
+    const response = await api.get('/settings');
+    return response.data;
+  },
+
+  updateSettings: async (settings: UserSettings) => {
+    const response = await api.post('/settings', settings);
+    return response.data;
+  },
+
+  testNotification: async (notificationType: 'email' | 'slack') => {
+    const response = await api.post('/settings/test-notification', { notification_type: notificationType });
+    return response.data;
+  },
+
+  cleanupData: async () => {
+    const response = await api.post('/settings/cleanup-data');
     return response.data;
   },
 

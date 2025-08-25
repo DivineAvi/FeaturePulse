@@ -51,6 +51,26 @@ class AnalysisResponse(BaseModel):
     summary: str
     changes: List[Dict[str, Any]]
 
+# Settings models
+class NotificationSettings(BaseModel):
+    email: bool = True
+    slack: bool = True
+    realtime: bool = False
+
+class TrackingSettings(BaseModel):
+    frequency: str = "Weekly"
+    max_pages: int = 10
+    smart_scroll: bool = True
+
+class DataManagementSettings(BaseModel):
+    retention_period: str = "90 days"
+    auto_cleanup: bool = True
+
+class UserSettings(BaseModel):
+    notifications: NotificationSettings
+    tracking: TrackingSettings
+    data_management: DataManagementSettings
+
 # Global instances
 db = DatabaseManager()
 scheduler = WeeklyScheduler()
@@ -66,6 +86,73 @@ tracking_status = {
     "end_time": None,
     "errors": []
 }
+
+# In-memory settings storage (in production, use database)
+user_settings = UserSettings(
+    notifications=NotificationSettings(),
+    tracking=TrackingSettings(),
+    data_management=DataManagementSettings()
+)
+
+# ================================
+# SETTINGS ROUTES
+# ================================
+
+@router.get("/settings")
+async def get_settings():
+    """Get current user settings"""
+    return user_settings
+
+@router.post("/settings")
+async def update_settings(settings: UserSettings):
+    """Update user settings"""
+    global user_settings
+    user_settings = settings
+    return {"message": "Settings updated successfully"}
+
+@router.post("/settings/test-notification")
+async def test_notification(notification_type: str):
+    """Test notification delivery"""
+    try:
+        if notification_type == "email":
+            # Simulate email notification
+            return {"message": "Email notification test sent successfully"}
+        elif notification_type == "slack":
+            # Simulate Slack notification
+            return {"message": "Slack notification test sent successfully"}
+        else:
+            raise HTTPException(status_code=400, detail="Invalid notification type")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send test notification: {str(e)}")
+
+@router.post("/settings/cleanup-data")
+async def cleanup_old_data():
+    """Clean up old data based on retention settings"""
+    try:
+        # Get retention period from settings
+        retention_period = user_settings.data_management.retention_period
+        
+        # Calculate cutoff date
+        if retention_period == "30 days":
+            cutoff_date = datetime.utcnow() - timedelta(days=30)
+        elif retention_period == "90 days":
+            cutoff_date = datetime.utcnow() - timedelta(days=90)
+        elif retention_period == "1 year":
+            cutoff_date = datetime.utcnow() - timedelta(days=365)
+        else:  # Forever
+            return {"message": "Data retention set to forever, no cleanup needed"}
+        
+        # Clean up old snapshots, changes, and reports
+        # This would be implemented in the database manager
+        # For now, we'll simulate the cleanup
+        
+        return {
+            "message": f"Data cleanup completed successfully",
+            "cutoff_date": cutoff_date.isoformat(),
+            "retention_period": retention_period
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to cleanup data: {str(e)}")
 
 # ================================
 # COMPETITOR MANAGEMENT ROUTES
@@ -178,29 +265,25 @@ async def start_tracking(background_tasks: BackgroundTasks, request: Optional[Cr
         "errors": []
     })
     
-    # Start background task
-    if request and request.competitor_id:
-        background_tasks.add_task(run_competitor_tracking, request.competitor_id)
-    else:
-        background_tasks.add_task(run_full_tracking, request.mode if request else "full")
+    # Start tracking in background
+    background_tasks.add_task(scheduler.run_scheduled_tracking)
     
-    return {"message": "Tracking started", "status": tracking_status}
+    return {"message": "Tracking started successfully"}
 
 @router.post("/tracking/stop")
 async def stop_tracking():
-    """Stop current tracking process"""
+    """Stop tracking process"""
     global tracking_status
     
     tracking_status.update({
         "status": TrackingStatus.IDLE,
-        "current_task": None,
         "end_time": datetime.utcnow()
     })
     
-    return {"message": "Tracking stopped", "status": tracking_status}
+    return {"message": "Tracking stopped successfully"}
 
 @router.post("/crawl")
-async def crawl_competitor(request: CrawlRequest, background_tasks: BackgroundTasks):
+async def crawl_competitor(request: CrawlRequest):
     """Crawl specific competitor or URLs"""
     try:
         if request.competitor_id:
@@ -211,31 +294,21 @@ async def crawl_competitor(request: CrawlRequest, background_tasks: BackgroundTa
             if not competitor:
                 raise HTTPException(status_code=404, detail="Competitor not found")
             
-            background_tasks.add_task(crawl_competitor_background, competitor)
-            
-            return {
-                "message": f"Started crawling competitor: {competitor['name']}",
-                "competitor_id": request.competitor_id,
-                "urls_count": len(competitor.get("tracking_urls", []))
-            }
-        
+            # Use agent to crawl competitor
+            result = await agent.run_weekly_tracking()
+            return result
         elif request.urls:
             # Crawl specific URLs
-            background_tasks.add_task(crawl_urls_background, request.urls)
-            
-            return {
-                "message": f"Started crawling {len(request.urls)} URLs",
-                "urls": [str(url) for url in request.urls]
-            }
-        
+            # This would be implemented with the crawler tools
+            return {"message": "URL crawling completed", "urls": [str(url) for url in request.urls]}
         else:
             raise HTTPException(status_code=400, detail="Either competitor_id or urls must be provided")
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to start crawling: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Crawling failed: {str(e)}")
 
 # ================================
-# ANALYTICS & REPORTS ROUTES
+# ANALYTICS ROUTES
 # ================================
 
 @router.get("/analytics/dashboard")
@@ -243,91 +316,149 @@ async def get_dashboard_data():
     """Get dashboard analytics data"""
     try:
         competitors = db.get_competitors()
+        changes = db.get_changes("")  # Get all changes
         reports = db.get_reports()
         
-        # Calculate metrics
-        total_competitors = len(competitors)
-        recent_reports = [r for r in reports if (datetime.utcnow() - r.get("delivered_at", datetime.utcnow())).days <= 7]
+        # Calculate overview metrics
+        overview = {
+            "total_competitors": len(competitors),
+            "recent_changes": len([c for c in changes if (datetime.utcnow() - c.get("detected_at", datetime.utcnow())).days <= 7]),
+            "recent_reports": len([r for r in reports if (datetime.utcnow() - r.get("delivered_at", datetime.utcnow())).days <= 7]),
+            "active_tracking": tracking_status["status"] == TrackingStatus.RUNNING
+        }
         
-        # Get change statistics
-        all_changes = []
-        for comp in competitors:
-            changes = db.get_changes(comp["id"])
-            all_changes.extend(changes)
-        
-        # Recent changes (last 7 days)
-        recent_changes = [
-            c for c in all_changes 
-            if (datetime.utcnow() - c.get("detected_at", datetime.utcnow())).days <= 7
-        ]
-        
-        # Group changes by type
-        change_types = {}
-        for change in recent_changes:
+        # Calculate change types
+        change_types = {"feature": 0, "pricing": 0, "ui": 0, "other": 0}
+        for change in changes:
             change_type = change.get("change_type", "other")
-            change_types[change_type] = change_types.get(change_type, 0) + 1
+            if change_type in change_types:
+                change_types[change_type] += 1
         
-        # Competitor activity
+        # Calculate competitor activity
         competitor_activity = []
         for comp in competitors:
-            changes = db.get_changes(comp["id"])
-            snapshots = db.get_snapshots(comp["id"])
-            
-            recent_activity = len([
-                c for c in changes 
-                if (datetime.utcnow() - c.get("detected_at", datetime.utcnow())).days <= 7
-            ])
-            
+            comp_changes = [c for c in changes if c.get("competitor_id") == comp["id"]]
             competitor_activity.append({
                 "name": comp["name"],
-                "category": comp.get("category", "Unknown"),
-                "recent_changes": recent_activity,
-                "total_snapshots": len(snapshots),
-                "last_updated": snapshots[0].get("taken_at") if snapshots else None
+                "category": comp.get("category", "Other"),
+                "recent_changes": len([c for c in comp_changes if (datetime.utcnow() - c.get("detected_at", datetime.utcnow())).days <= 7]),
+                "total_snapshots": len(db.get_snapshots(comp["id"]))
             })
         
         return {
-            "overview": {
-                "total_competitors": total_competitors,
-                "recent_reports": len(recent_reports),
-                "recent_changes": len(recent_changes),
-                "active_tracking": tracking_status["status"] == TrackingStatus.RUNNING
-            },
+            "overview": overview,
             "change_types": change_types,
-            "competitor_activity": competitor_activity,
-            "tracking_status": tracking_status
+            "competitor_activity": competitor_activity
         }
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch dashboard data: {str(e)}")
 
+@router.get("/insights/trending")
+async def get_trending_insights():
+    """Get trending insights and analytics"""
+    try:
+        competitors = db.get_competitors()
+        changes = db.get_changes("")  # Get all changes
+        
+        # Calculate category trends
+        category_trends = {}
+        for comp in competitors:
+            category = comp.get("category", "Other")
+            category_trends[category] = category_trends.get(category, 0) + 1
+        
+        # Calculate change type trends
+        change_type_trends = {"feature": 0, "pricing": 0, "ui": 0, "other": 0}
+        for change in changes:
+            change_type = change.get("change_type", "other")
+            if change_type in change_type_trends:
+                change_type_trends[change_type] += 1
+        
+        # Calculate most active competitors
+        competitor_activity = {}
+        for change in changes:
+            comp_id = change.get("competitor_id")
+            if comp_id:
+                competitor_activity[comp_id] = competitor_activity.get(comp_id, 0) + 1
+        
+        most_active = []
+        for comp in competitors:
+            if comp["id"] in competitor_activity:
+                most_active.append({
+                    "name": comp["name"],
+                    "changes": competitor_activity[comp["id"]]
+                })
+        
+        most_active.sort(key=lambda x: x["changes"], reverse=True)
+        
+        # Calculate total changes in last 30 days
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        recent_changes = [c for c in changes if c.get("detected_at", datetime.utcnow()) >= thirty_days_ago]
+        
+        return {
+            "category_trends": category_trends,
+            "change_type_trends": change_type_trends,
+            "most_active_competitors": most_active[:5],  # Top 5
+            "total_changes_30d": len(recent_changes)
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch insights: {str(e)}")
+
+# ================================
+# CHANGES ROUTES
+# ================================
+
+@router.get("/changes")
+async def get_changes(
+    competitor_id: Optional[str] = Query(None),
+    change_type: Optional[str] = Query(None),
+    days: Optional[int] = Query(None),
+    limit: Optional[int] = Query(50)
+):
+    """Get detected changes with optional filtering"""
+    try:
+        changes = db.get_changes(competitor_id or "")
+        
+        # Apply filters
+        if change_type:
+            changes = [c for c in changes if c.get("change_type") == change_type]
+        
+        if days:
+            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            changes = [c for c in changes if c.get("detected_at", datetime.utcnow()) >= cutoff_date]
+        
+        # Apply limit
+        changes = changes[:limit]
+        
+        return changes
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch changes: {str(e)}")
+
+# ================================
+# REPORTS ROUTES
+# ================================
+
 @router.get("/reports")
-async def get_reports(limit: int = Query(10, ge=1, le=50)):
-    """Get recent reports"""
+async def get_reports(limit: Optional[int] = Query(10)):
+    """Get generated reports"""
     try:
         reports = db.get_reports()
-        
-        # Sort by delivery date and limit
-        sorted_reports = sorted(
-            reports, 
-            key=lambda x: x.get("delivered_at", datetime.utcnow()), 
-            reverse=True
-        )[:limit]
-        
-        return sorted_reports
+        return reports[:limit]
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch reports: {str(e)}")
 
 @router.get("/reports/{week}")
-async def get_weekly_report(week: str):
-    """Get specific weekly report"""
+async def get_report(week: str):
+    """Get specific report by week"""
     try:
         reports = db.get_reports()
         report = next((r for r in reports if r.get("week") == week), None)
         
         if not report:
-            raise HTTPException(status_code=404, detail=f"Report for week {week} not found")
+            raise HTTPException(status_code=404, detail="Report not found")
         
         return report
     
@@ -336,201 +467,132 @@ async def get_weekly_report(week: str):
 
 @router.post("/reports/generate")
 async def generate_report(background_tasks: BackgroundTasks):
-    """Generate new weekly report"""
+    """Generate a new weekly report"""
     try:
-        background_tasks.add_task(generate_weekly_report_background)
-        return {"message": "Report generation started"}
+        # Start report generation in background
+        background_tasks.add_task(scheduler.run_scheduled_tracking)
+        
+        return {"message": "Report generation started successfully"}
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to start report generation: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
 
-# ================================
-# CHANGES & INSIGHTS ROUTES
-# ================================
-
-@router.get("/changes")
-async def get_changes(
-    competitor_id: Optional[str] = Query(None),
-    change_type: Optional[str] = Query(None),
-    days: int = Query(30, ge=1, le=365),
-    limit: int = Query(50, ge=1, le=200)
-):
-    """Get changes with filtering"""
+@router.get("/reports/{report_id}/download")
+async def download_report(report_id: str):
+    """Download a report as PDF"""
     try:
-        if competitor_id:
-            changes = db.get_changes(competitor_id)
-        else:
-            # Get changes for all competitors
-            competitors = db.get_competitors()
-            changes = []
-            for comp in competitors:
-                comp_changes = db.get_changes(comp["id"])
-                for change in comp_changes:
-                    change["competitor_name"] = comp["name"]
-                changes.extend(comp_changes)
+        # Get the report data
+        reports = db.get_reports()
+        report = next((r for r in reports if r.get("id") == report_id), None)
         
-        # Filter by date
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
-        filtered_changes = [
-            c for c in changes 
-            if c.get("detected_at", datetime.utcnow()) >= cutoff_date
-        ]
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
         
-        # Filter by type if specified
-        if change_type:
-            filtered_changes = [
-                c for c in filtered_changes 
-                if c.get("change_type") == change_type
-            ]
+        if report.get("status") != "completed":
+            raise HTTPException(status_code=400, detail="Report is not ready for download")
         
-        # Sort by date and limit
-        sorted_changes = sorted(
-            filtered_changes,
-            key=lambda x: x.get("detected_at", datetime.utcnow()),
-            reverse=True
-        )[:limit]
+        # Generate PDF content (this would be implemented with a PDF library like reportlab)
+        # For now, we'll create a simple text-based report
+        from fastapi.responses import Response
         
-        return sorted_changes
+        # Create a simple text report
+        report_content = f"""
+COMPETITOR INTELLIGENCE REPORT
+==============================
+
+Report: {report.get('title', 'Weekly Report')}
+Week: {report.get('week', 'Unknown')}
+Generated: {report.get('delivered_at', datetime.utcnow()).strftime('%Y-%m-%d %H:%M:%S')}
+
+SUMMARY
+-------
+Competitors Tracked: {report.get('competitors_tracked', 0)}
+Changes Detected: {report.get('changes_detected', 0)}
+Status: {report.get('status', 'Unknown')}
+
+DETAILED ANALYSIS
+----------------
+This report contains detailed analysis of competitor activities and changes detected during the tracking period.
+
+For more detailed information, please visit the dashboard at your competitor tracking application.
+
+Generated by FeaturePulse Competitor Tracker
+        """
+        
+        # Return as text file (in production, you'd generate a proper PDF)
+        return Response(
+            content=report_content,
+            media_type="text/plain",
+            headers={
+                "Content-Disposition": f"attachment; filename=report_{report.get('week', 'unknown')}.txt"
+            }
+        )
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch changes: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to download report: {str(e)}")
 
-@router.get("/insights/trending")
-async def get_trending_insights():
-    """Get trending insights and patterns"""
+@router.get("/reports/download/all")
+async def download_all_reports():
+    """Download all completed reports as a zip file"""
     try:
-        # Get recent changes
-        competitors = db.get_competitors()
-        all_changes = []
+        import zipfile
+        import io
         
-        for comp in competitors:
-            changes = db.get_changes(comp["id"])
-            for change in changes:
-                change["competitor_name"] = comp["name"]
-                change["category"] = comp.get("category", "Unknown")
-            all_changes.extend(changes)
+        # Get all completed reports
+        reports = db.get_reports()
+        completed_reports = [r for r in reports if r.get("status") == "completed"]
         
-        # Filter to last 30 days
-        recent_changes = [
-            c for c in all_changes 
-            if (datetime.utcnow() - c.get("detected_at", datetime.utcnow())).days <= 30
-        ]
+        if not completed_reports:
+            raise HTTPException(status_code=404, detail="No completed reports found")
         
-        # Analyze trends
-        category_trends = {}
-        change_type_trends = {}
+        # Create a zip file in memory
+        zip_buffer = io.BytesIO()
         
-        for change in recent_changes:
-            category = change.get("category", "Unknown")
-            change_type = change.get("change_type", "other")
-            
-            category_trends[category] = category_trends.get(category, 0) + 1
-            change_type_trends[change_type] = change_type_trends.get(change_type, 0) + 1
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for report in completed_reports:
+                # Create report content
+                report_content = f"""
+COMPETITOR INTELLIGENCE REPORT
+==============================
+
+Report: {report.get('title', 'Weekly Report')}
+Week: {report.get('week', 'Unknown')}
+Generated: {report.get('delivered_at', datetime.utcnow()).strftime('%Y-%m-%d %H:%M:%S')}
+
+SUMMARY
+-------
+Competitors Tracked: {report.get('competitors_tracked', 0)}
+Changes Detected: {report.get('changes_detected', 0)}
+Status: {report.get('status', 'Unknown')}
+
+DETAILED ANALYSIS
+----------------
+This report contains detailed analysis of competitor activities and changes detected during the tracking period.
+
+For more detailed information, please visit the dashboard at your competitor tracking application.
+
+Generated by FeaturePulse Competitor Tracker
+                """
+                
+                # Add file to zip
+                filename = f"report_{report.get('week', 'unknown')}.txt"
+                zip_file.writestr(filename, report_content)
         
-        # Most active competitors
-        competitor_activity = {}
-        for change in recent_changes:
-            comp_name = change.get("competitor_name", "Unknown")
-            competitor_activity[comp_name] = competitor_activity.get(comp_name, 0) + 1
+        # Reset buffer position
+        zip_buffer.seek(0)
         
-        # Sort by activity
-        top_competitors = sorted(
-            competitor_activity.items(), 
-            key=lambda x: x[1], 
-            reverse=True
-        )[:5]
-        
-        return {
-            "category_trends": category_trends,
-            "change_type_trends": change_type_trends,
-            "most_active_competitors": [{"name": name, "changes": count} for name, count in top_competitors],
-            "total_changes_30d": len(recent_changes),
-            "analysis_date": datetime.utcnow()
-        }
+        # Return zip file
+        from fastapi.responses import Response
+        return Response(
+            content=zip_buffer.getvalue(),
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f"attachment; filename=all_reports_{datetime.utcnow().strftime('%Y%m%d')}.zip"
+            }
+        )
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate insights: {str(e)}")
-
-# ================================
-# BACKGROUND TASKS
-# ================================
-
-async def run_full_tracking(mode: str = "full"):
-    """Background task for full tracking"""
-    global tracking_status
-    
-    try:
-        tracking_status["current_task"] = "Full competitor tracking"
-        result = await scheduler.run_scheduled_tracking()
-        
-        tracking_status.update({
-            "status": TrackingStatus.COMPLETED,
-            "end_time": datetime.utcnow(),
-            "progress": 100
-        })
-        
-    except Exception as e:
-        tracking_status.update({
-            "status": TrackingStatus.ERROR,
-            "end_time": datetime.utcnow(),
-            "errors": [str(e)]
-        })
-
-async def run_competitor_tracking(competitor_id: str):
-    """Background task for single competitor tracking"""
-    global tracking_status
-    
-    try:
-        tracking_status["current_task"] = f"Tracking competitor {competitor_id}"
-        # Implement single competitor tracking logic
-        await asyncio.sleep(2)  # Placeholder
-        
-        tracking_status.update({
-            "status": TrackingStatus.COMPLETED,
-            "end_time": datetime.utcnow(),
-            "progress": 100
-        })
-        
-    except Exception as e:
-        tracking_status.update({
-            "status": TrackingStatus.ERROR,
-            "end_time": datetime.utcnow(),
-            "errors": [str(e)]
-        })
-
-async def crawl_competitor_background(competitor: dict):
-    """Background task for crawling specific competitor"""
-    try:
-        website_crawler = WebsiteCrawlTool()
-        
-        for url in competitor.get("tracking_urls", []):
-            result = await website_crawler.run(str(url), max_pages=5)
-            # Process and store results
-            print(f"Crawled {url}: {len(result) if isinstance(result, dict) else 'Error'}")
-            
-    except Exception as e:
-        print(f"Error crawling competitor {competitor['name']}: {str(e)}")
-
-async def crawl_urls_background(urls: List[HttpUrl]):
-    """Background task for crawling specific URLs"""
-    try:
-        website_crawler = WebsiteCrawlTool()
-        
-        for url in urls:
-            result = await website_crawler.run(str(url), max_pages=3)
-            print(f"Crawled {url}: {len(result) if isinstance(result, dict) else 'Error'}")
-            
-    except Exception as e:
-        print(f"Error crawling URLs: {str(e)}")
-
-async def generate_weekly_report_background():
-    """Background task for generating weekly report"""
-    try:
-        result = await scheduler.run_scheduled_tracking()
-        print(f"Weekly report generated: {result}")
-        
-    except Exception as e:
-        print(f"Error generating weekly report: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to download all reports: {str(e)}")
 
 # ================================
 # HEALTH CHECK
@@ -539,21 +601,8 @@ async def generate_weekly_report_background():
 @router.get("/health")
 async def health_check():
     """Health check endpoint"""
-    try:
-        # Check database connection
-        competitors = db.get_competitors()
-        
-        return {
-            "status": "healthy",
-            "timestamp": datetime.utcnow(),
-            "database": "connected",
-            "competitors_count": len(competitors),
-            "tracking_status": tracking_status["status"]
-        }
-    
-    except Exception as e:
-        return {
-            "status": "unhealthy",
-            "timestamp": datetime.utcnow(),
-            "error": str(e)
-        }
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
+    }

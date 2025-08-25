@@ -56,6 +56,24 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const recentChanges = changes.slice(0, 5);
 
+  // Show loading state if dashboardData is null
+  if (!dashboardData) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-600">Monitor your competitors and track changes</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Loading dashboard data...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -95,7 +113,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Competitors</p>
               <p className="text-2xl font-bold text-gray-900">
-                {dashboardData?.overview.total_competitors || 0}
+                {dashboardData.overview?.total_competitors || 0}
               </p>
             </div>
           </div>
@@ -109,7 +127,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Recent Changes</p>
               <p className="text-2xl font-bold text-gray-900">
-                {dashboardData?.overview.recent_changes || 0}
+                {dashboardData.overview?.recent_changes || 0}
               </p>
             </div>
           </div>
@@ -123,7 +141,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Reports Generated</p>
               <p className="text-2xl font-bold text-gray-900">
-                {dashboardData?.overview.recent_reports || 0}
+                {dashboardData.overview?.recent_reports || 0}
               </p>
             </div>
           </div>
@@ -152,10 +170,10 @@ const Dashboard: React.FC<DashboardProps> = ({
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={Object.entries(dashboardData?.change_types || {}).map(([key, value]) => ({
+                data={Object.entries(dashboardData.change_types || {}).map(([key, value]) => ({
                   name: key,
                   value,
-                  color: changeTypeColors[key as keyof typeof changeTypeColors]
+                  color: changeTypeColors[key as keyof typeof changeTypeColors] || '#6B7280'
                 }))}
                 cx="50%"
                 cy="50%"
@@ -163,8 +181,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                 dataKey="value"
                 label={({ name, value }) => `${name}: ${value}`}
               >
-                {Object.entries(dashboardData?.change_types || {}).map(([key]) => (
-                  <Cell key={key} fill={changeTypeColors[key as keyof typeof changeTypeColors]} />
+                {Object.entries(dashboardData.change_types || {}).map(([key]) => (
+                  <Cell key={key} fill={changeTypeColors[key as keyof typeof changeTypeColors] || '#6B7280'} />
                 ))}
               </Pie>
               <Tooltip />
@@ -176,7 +194,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Competitor Activity</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={dashboardData?.competitor_activity || []}>
+            <BarChart data={dashboardData.competitor_activity || []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
@@ -198,38 +216,42 @@ const Dashboard: React.FC<DashboardProps> = ({
             View All
           </button>
         </div>
-        <div className="space-y-4">
-          {recentChanges.map((change) => (
-            <div key={change.id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-              <div className={`p-2 rounded-lg ${
-                change.change_type === 'feature' ? 'bg-green-100' :
-                change.change_type === 'pricing' ? 'bg-yellow-100' :
-                change.change_type === 'ui' ? 'bg-blue-100' : 'bg-gray-100'
-              }`}>
-                {change.change_type === 'feature' && <TrendingUp className="w-4 h-4 text-green-600" />}
-                {change.change_type === 'pricing' && <AlertTriangle className="w-4 h-4 text-yellow-600" />}
-                {change.change_type === 'ui' && <Activity className="w-4 h-4 text-blue-600" />}
-                {change.change_type === 'other' && <FileText className="w-4 h-4 text-gray-600" />}
+        {recentChanges.length > 0 ? (
+          <div className="space-y-3">
+            {recentChanges.map((change) => (
+              <div key={change.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-2 h-2 rounded-full ${
+                    change.severity === 'high' ? 'bg-red-500' :
+                    change.severity === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                  }`}></div>
+                  <div>
+                    <p className="font-medium text-gray-900">{change.competitor_name || 'Unknown'}</p>
+                    <p className="text-sm text-gray-600">{change.change_type}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600">
+                    {new Date(change.detected_at).toLocaleDateString()}
+                  </p>
+                  {change.severity && (
+                    <span className={`inline-block px-2 py-1 text-xs rounded-full ${
+                      change.severity === 'high' ? 'bg-red-100 text-red-800' :
+                      change.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {change.severity}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">{change.competitor_name}</p>
-                <p className="text-sm text-gray-600">{change.description}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">
-                  {new Date(change.detected_at).toLocaleDateString()}
-                </p>
-                <span className={`inline-block px-2 py-1 text-xs rounded-full ${
-                  change.severity === 'high' ? 'bg-red-100 text-red-800' :
-                  change.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-green-100 text-green-800'
-                }`}>
-                  {change.severity}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">No recent changes detected</p>
+          </div>
+        )}
       </div>
     </div>
   );
