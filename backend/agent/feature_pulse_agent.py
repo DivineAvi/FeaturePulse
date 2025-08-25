@@ -393,9 +393,13 @@ class CompetitorTrackingAgent:
                     Changes detected:
                     {change['change_details'].get('diff', '')}
                     
-                    Categorize this change as one of: feature, pricing, ui, marketing, other
-                    Provide a concise summary of what changed and its potential business impact.
-                    Focus on product features, pricing changes, new offerings, or significant UI updates.
+                    Provide a detailed analysis in this format:
+                    1. **Change Type**: Categorize as feature, pricing, ui, marketing, or other
+                    2. **What Changed**: Specific details of what was modified (e.g., "Price increased from $9.99 to $12.99", "New feature X added", "UI redesigned")
+                    3. **Business Impact**: Potential impact on market positioning, customer acquisition, or competitive advantage
+                    4. **Strategic Insights**: What this change suggests about their strategy or market direction
+                    
+                    Be specific about numbers, features, and concrete changes when possible.
                     """
                 
                 elif change["change_type"] == "app":
@@ -410,14 +414,19 @@ class CompetitorTrackingAgent:
                     Release Notes: {app_data.get('release_notes', 'No notes')}
                     Description: {app_data.get('description', 'No description')[:500]}
                     
-                    Categorize this update as one of: feature, pricing, ui, bugfix, other
-                    Provide a summary of new features or significant changes.
+                    Provide a detailed analysis in this format:
+                    1. **Change Type**: Categorize as feature, pricing, ui, bugfix, or other
+                    2. **What Changed**: Specific new features, UI updates, or changes (e.g., "Added dark mode", "New payment integration", "Performance improvements")
+                    3. **Business Impact**: How this update affects user experience, market positioning, or competitive advantage
+                    4. **Strategic Insights**: What this update reveals about their product roadmap or market strategy
+                    
+                    Extract specific details from release notes and description.
                     """
                 
                 # Get AI analysis
                 result = self.tools.llm.chat(
                     question=analysis_prompt,
-                    system_prompt="You are an expert product analyst. Analyze competitor changes and provide structured insights about product updates, features, and business impact."
+                    system_prompt="You are a senior competitive intelligence analyst with expertise in product strategy and market analysis. Your role is to provide detailed, actionable insights about competitor changes. Focus on extracting specific details like pricing changes, feature additions, UI modifications, and strategic implications. Be precise with numbers, dates, and concrete changes. Structure your analysis to help product teams make informed strategic decisions."
                 )
                 
                 # Build detailed payload per change for richer reporting later
@@ -510,21 +519,44 @@ class CompetitorTrackingAgent:
             Input (JSON):
             {json.dumps(competitor_summaries, indent=2)}
             
-            Produce a structured Markdown report with:
-            1) Executive Summary: key competitive themes and trends.
-            2) Detailed Changes (by competitor):
-               - For each change include: Competitor, Change Type, Timestamp, URL (if any).
-               - For website changes, include a concise diff summary highlighting what changed.
-               - For app updates, include Title, Version, Release Notes (summarize), and notable description changes.
-               - Keep this section factual and specific, focusing on what changed.
-            3) Insights & Implications: interpret the above changes and potential impact.
-            4) Recommendations: concrete next steps for product/GTMP.
+            Produce a structured Markdown report organized by COMPETITOR:
+            
+            ## Executive Summary
+            Brief overview of key competitive themes and trends across all competitors.
+            
+            ## Competitor Analysis
+            
+            For each competitor, create a section like this:
+            
+            ### [Competitor Name]
+            
+            **Overview**: Brief summary of their recent activity and strategic direction.
+            
+            **Changes Detected**:
+            - **Change Type**: [feature/pricing/ui/marketing/other]
+            - **What Changed**: [Specific details - e.g., "Price increased from $9.99 to $12.99", "Added new AI feature"]
+            - **URL**: [Link if available]
+            - **Timestamp**: [When detected]
+            - **Business Impact**: [How this affects market positioning]
+            - **Strategic Insights**: [What this reveals about their strategy]
+            
+            **Key Insights**:
+            - [Strategic implications for this competitor]
+            - [Market positioning analysis]
+            - [Potential competitive threats or opportunities]
+            
+            ## Overall Market Insights
+            Cross-competitor analysis and market trends.
+            
+            ## Strategic Recommendations
+            Concrete next steps for our product strategy based on these insights.
             
             Requirements:
-            - Ensure every change is explicitly attributed to its competitor.
-            - Prefer bullet lists with short, information-dense items.
-            - Include links when available.
-            - Avoid fluff; be detailed about the actual changes.
+            - Structure by competitor first, then their changes
+            - Include specific numbers, features, and concrete changes
+            - Provide actionable insights for each competitor
+            - Focus on strategic implications and business impact
+            - Use bullet points for readability
             """
             
             result = self.tools.llm.chat(

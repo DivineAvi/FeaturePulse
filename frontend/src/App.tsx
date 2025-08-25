@@ -26,6 +26,7 @@ const CompetitorTracker: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const addCompetitor = async (competitor: Competitor): Promise<void> => {
     try {
@@ -208,7 +209,7 @@ const CompetitorTracker: React.FC = () => {
         </div>
       </div>
     );
-  }
+      }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -216,15 +217,27 @@ const CompetitorTracker: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
+              {/* Mobile menu button */}
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                   <Target className="w-5 h-5 text-white" />
                 </div>
-                <h1 className="text-xl font-bold text-gray-900">CompetitorTracker</h1>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">CompetitorTracker</h1>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
+            
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Status indicator - hidden on very small screens */}
+              <div className="hidden sm:flex items-center space-x-2">
                 <div className={`w-2 h-2 rounded-full ${
                   trackingStatus.status === 'running' ? 'bg-green-400' : 
                   trackingStatus.status === 'completed' ? 'bg-blue-400' :
@@ -236,6 +249,7 @@ const CompetitorTracker: React.FC = () => {
                    trackingStatus.status === 'error' ? 'Tracking Error' : 'Tracking Idle'}
                 </span>
               </div>
+              
               <button 
                 onClick={refreshAllData}
                 className="p-2 text-gray-400 hover:text-gray-600"
@@ -251,10 +265,35 @@ const CompetitorTracker: React.FC = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex">
-          <nav className="w-64 mr-8">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="flex flex-col lg:flex-row">
+          {/* Mobile sidebar overlay */}
+          {sidebarOpen && (
+            <div 
+              className="fixed inset-0 z-40 lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <div className="fixed inset-0 bg-gray-600 bg-opacity-75"></div>
+            </div>
+          )}
+
+          {/* Sidebar */}
+          <nav className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 lg:hidden">
+              <h2 className="text-lg font-semibold text-gray-900">Menu</h2>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-4">
               <ul className="space-y-2">
                 {([
                   { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -266,7 +305,10 @@ const CompetitorTracker: React.FC = () => {
                 ] as TabItem[]).map((item) => (
                   <li key={item.id}>
                     <button
-                      onClick={() => setActiveTab(item.id)}
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        setSidebarOpen(false); // Close sidebar on mobile after selection
+                      }}
                       className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         activeTab === item.id
                           ? 'bg-blue-100 text-blue-700'
@@ -282,7 +324,7 @@ const CompetitorTracker: React.FC = () => {
             </div>
           </nav>
 
-          <main className="flex-1">{renderContent()}</main>
+          <main className="flex-1 mt-4 lg:mt-0 lg:ml-8">{renderContent()}</main>
         </div>
       </div>
 

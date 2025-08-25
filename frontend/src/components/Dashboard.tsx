@@ -113,16 +113,16 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600">Monitor your competitors and track changes</p>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
           {trackingStatus.status === 'idle' && (
             <button
               onClick={startTracking}
-              className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Play className="w-4 h-4" />
               <span>Start Tracking</span>
@@ -131,21 +131,21 @@ const Dashboard: React.FC<DashboardProps> = ({
           {trackingStatus.status === 'running' && (
             <button
               onClick={stopTracking}
-              className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              className="flex items-center justify-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
             >
               <Square className="w-4 h-4" />
               <span>Stop Tracking</span>
             </button>
           )}
           {trackingStatus.status === 'completed' && (
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-2 bg-green-100 text-green-800 px-3 py-2 rounded-lg">
+            <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3">
+              <div className="flex items-center justify-center space-x-2 bg-green-100 text-green-800 px-3 py-2 rounded-lg">
                 <CheckCircle className="w-4 h-4" />
                 <span className="text-sm font-medium">Tracking Completed</span>
               </div>
               <button
                 onClick={startTracking}
-                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Play className="w-4 h-4" />
                 <span>Start New Tracking</span>
@@ -153,14 +153,14 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           )}
           {trackingStatus.status === 'error' && (
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-2 bg-red-100 text-red-800 px-3 py-2 rounded-lg">
+            <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3">
+              <div className="flex items-center justify-center space-x-2 bg-red-100 text-red-800 px-3 py-2 rounded-lg">
                 <AlertTriangle className="w-4 h-4" />
                 <span className="text-sm font-medium">Tracking Session Failed</span>
               </div>
               <button
                 onClick={startTracking}
-                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Play className="w-4 h-4" />
                 <span>Retry Tracking</span>
@@ -200,57 +200,59 @@ const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
-              <Users className="w-6 h-6 text-blue-600" />
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Competitors</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="ml-3 sm:ml-4">
+              <p className="text-xs sm:text-sm font-medium text-gray-600">Total Competitors</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">
                 {dashboardData.overview?.total_competitors || 0}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
           <div className="flex items-center">
             <div className="p-2 bg-green-100 rounded-lg">
-              <Activity className="w-6 h-6 text-green-600" />
+              <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Recent Changes</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="ml-3 sm:ml-4">
+              <p className="text-xs sm:text-sm font-medium text-gray-600">Recent Changes</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">
                 {dashboardData.overview?.recent_changes || 0}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
           <div className="flex items-center">
             <div className="p-2 bg-purple-100 rounded-lg">
-              <FileText className="w-6 h-6 text-purple-600" />
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Reports Generated</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="ml-3 sm:ml-4">
+              <p className="text-xs sm:text-sm font-medium text-gray-600">Reports Generated</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">
                 {dashboardData.overview?.recent_reports || 0}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
           <div className="flex items-center">
             <div className={`p-2 ${trackingStatusInfo.bgColor} rounded-lg`}>
-              {trackingStatusInfo.icon}
+              <div className="w-5 h-5 sm:w-6 sm:h-6">
+                {trackingStatusInfo.icon}
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Tracking Status</p>
-              <p className={`text-2xl font-bold ${trackingStatusInfo.color}`}>
+            <div className="ml-3 sm:ml-4">
+              <p className="text-xs sm:text-sm font-medium text-gray-600">Tracking Status</p>
+              <p className={`text-xl sm:text-2xl font-bold ${trackingStatusInfo.color}`}>
                 {trackingStatusInfo.text}
               </p>
             </div>
@@ -259,11 +261,11 @@ const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Change Types Chart */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Change Types</h3>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Change Types</h3>
+          <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
             <PieChart>
               <Pie
                 data={Object.entries(dashboardData.change_types || {}).map(([key, value]) => ({
@@ -273,7 +275,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                 }))}
                 cx="50%"
                 cy="50%"
-                outerRadius={80}
+                outerRadius={60}
+                className="sm:outerRadius={80}"
                 dataKey="value"
                 label={({ name, value }) => `${name}: ${value}`}
               >
@@ -287,9 +290,9 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Competitor Activity Chart */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Competitor Activity</h3>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Competitor Activity</h3>
+          <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
             <BarChart data={dashboardData.competitor_activity || []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
@@ -302,9 +305,9 @@ const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Recent Changes */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Changes</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">Recent Changes</h3>
           <button
             onClick={() => setActiveTab('changes')}
             className="text-blue-600 hover:text-blue-700 text-sm font-medium"
@@ -315,19 +318,19 @@ const Dashboard: React.FC<DashboardProps> = ({
         {recentChanges.length > 0 ? (
           <div className="space-y-3">
             {recentChanges.map((change) => (
-              <div key={change.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div key={change.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg space-y-2 sm:space-y-0">
                 <div className="flex items-center space-x-3">
                   <div className={`w-2 h-2 rounded-full ${
                     change.severity === 'high' ? 'bg-red-500' :
                     change.severity === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
                   }`}></div>
                   <div>
-                    <p className="font-medium text-gray-900">{change.competitor_name || 'Unknown'}</p>
-                    <p className="text-sm text-gray-600">{change.change_type}</p>
+                    <p className="font-medium text-gray-900 text-sm sm:text-base">{change.competitor_name || 'Unknown'}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">{change.change_type}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">
+                <div className="text-left sm:text-right">
+                  <p className="text-xs sm:text-sm text-gray-600">
                     {new Date(change.detected_at).toLocaleDateString()}
                   </p>
                   {change.severity && (
@@ -344,8 +347,8 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         ) : (
           <div className="text-center py-8">
-            <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">No recent changes detected</p>
+            <AlertTriangle className="w-8 h-8 sm:w-12 sm:h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-sm sm:text-base text-gray-600">No recent changes detected</p>
           </div>
         )}
       </div>
