@@ -1,7 +1,4 @@
-class PROMPT:
-    @property
-    def DIFF_PROMPT():
-        return """You are a product analyst. 
+DIFF_PROMPT = """You are a product analyst.
 Compare the old content and new content from a competitor page.
 Identify meaningful changes in features, pricing, or messaging.
 Output JSON with { category, summary, impact }.

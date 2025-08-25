@@ -1,69 +1,103 @@
-# React + TypeScript + Vite
+# Competitor Feature Tracker - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern React frontend for monitoring competitor websites, tracking changes, and generating intelligence reports.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Dashboard**: Overview of tracking status, metrics, and recent changes
+- **Competitors**: Manage and monitor competitor profiles
+- **Changes**: View and filter detected changes with detailed analysis
+- **Reports**: Generate and view weekly competitor intelligence reports
+- **Analytics**: Deep insights into competitor activity and trends
+- **Settings**: Configure tracking preferences and notifications
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **React 19** with TypeScript
+- **Vite** for fast development and building
+- **Tailwind CSS** for styling
+- **Lucide React** for icons
+- **Recharts** for data visualization
+- **Axios** for API communication
+- **React Router** for navigation
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Getting Started
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+### Prerequisites
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Node.js 18+ 
+- Backend server running on `http://localhost:8000`
+
+### Installation
+
+1. Install dependencies:
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+2. Start the development server:
+```bash
+npm run dev
 ```
+
+3. Open [http://localhost:5173](http://localhost:5173) in your browser
+
+### Building for Production
+
+```bash
+npm run build
+```
+
+## API Integration
+
+The frontend connects to the backend API at `http://localhost:8000/api`. Make sure your backend is running and MongoDB is connected.
+
+### Key API Endpoints
+
+- `GET /api/competitors` - List all competitors
+- `POST /api/competitors` - Add new competitor
+- `GET /api/analytics/dashboard` - Get dashboard data
+- `POST /api/tracking/start` - Start competitor tracking
+- `GET /api/changes` - Get detected changes
+- `POST /api/reports/generate` - Generate weekly report
+
+## Project Structure
+
+```
+src/
+├── components/          # React components
+│   ├── Dashboard.tsx    # Main dashboard
+│   ├── Competitors.tsx  # Competitor management
+│   ├── Changes.tsx      # Change tracking
+│   ├── Reports.tsx      # Report generation
+│   ├── Analytics.tsx    # Data analytics
+│   ├── Settings.tsx     # Configuration
+│   └── modals/          # Modal components
+├── services/
+│   └── api.ts          # API integration
+├── types.ts            # TypeScript types
+└── App.tsx             # Main application
+```
+
+## Usage
+
+1. **Add Competitors**: Use the "Add Competitor" button to add new competitors with their websites and tracking URLs
+2. **Start Tracking**: Click "Start Tracking" on the dashboard to begin monitoring
+3. **View Changes**: Navigate to the Changes tab to see detected updates
+4. **Generate Reports**: Create weekly intelligence reports in the Reports section
+5. **Analyze Trends**: Use the Analytics tab for deeper insights
+
+## Configuration
+
+Update the API base URL in `src/services/api.ts` if your backend runs on a different port:
+
+```typescript
+const API_BASE_URL = 'http://localhost:8000/api';
+```
+
+## Development
+
+- **Hot Reload**: Changes are automatically reflected in the browser
+- **TypeScript**: Full type safety and IntelliSense support
+- **ESLint**: Code quality and consistency
+- **Tailwind**: Utility-first CSS framework for rapid UI development

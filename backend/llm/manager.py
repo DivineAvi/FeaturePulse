@@ -43,6 +43,7 @@ class llm:
         reply = None
         args = None
         tool_call = False
+        tool_name = None
 
         for o in response.output:
             # ✅ Extract text

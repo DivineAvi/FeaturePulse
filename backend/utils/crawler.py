@@ -5,7 +5,7 @@ from playwright.async_api import async_playwright,Page,ElementHandle
 from urllib.parse import urljoin, urlparse, urldefrag
 import re
 
-from utils.utils import clean_and_hash
+from utils.utils import clean_and_hash, clean_html
 
 #############################################################
 ##                      SCRAPPER CLASS
@@ -221,14 +221,9 @@ class Crawler:
                 
                 # Get page content
                 html = await page.content()
-                html = clean_and_hash(html)
-                # Clean HTML and store result
-                try:
-                    from utils import clean_html
-                    results[normalized_url] = clean_html(html)
-                except ImportError:
-                    # Fallback if utils not available
-                    results[normalized_url] = html
+                cleaned_text, content_hash = clean_and_hash(html)
+                # Store cleaned text; hash is used by callers when needed
+                results[normalized_url] = cleaned_text
                 
                 # Extract all links from current page
                 link_elements = await page.query_selector_all('a[href]')
@@ -278,11 +273,7 @@ class Crawler:
                 await self.infinite_scroll(page)
 
             html = await page.content()
-            try:
-                from utils import clean_html
-                results[url] = clean_html(html)
-            except ImportError:
-                results[url] = html
+            results[url] = clean_html(html)
 
         await self.close()
         return results

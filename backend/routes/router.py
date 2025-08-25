@@ -8,7 +8,7 @@ from enum import Enum
 
 from database.mongo.manager import DatabaseManager
 from database.mongo.schemas import Competitor, Snapshot, Change, Announcement, Report
-from agent.competitor_tracking_agent import CompetitorTrackingAgent, WeeklyScheduler
+from agent.feature_pulse_agent import CompetitorTrackingAgent, WeeklyScheduler
 from tools.appstore_tool import AppStoreTool
 from tools.playstore_tool import PlayStoreTool
 from tools.website_crawl_tool import WebsiteCrawlTool
@@ -142,8 +142,13 @@ async def get_competitor(competitor_id: str):
 async def delete_competitor(competitor_id: str):
     """Delete a competitor and all related data"""
     try:
-        # In a real implementation, you'd add delete methods to DatabaseManager
-        return {"message": f"Competitor {competitor_id} deleted successfully"}
+        deleted = db.delete_competitor(competitor_id)
+        if deleted.get("deleted_competitors", 0) == 0:
+            raise HTTPException(status_code=404, detail="Competitor not found")
+        return {
+            "message": f"Competitor {competitor_id} deleted successfully",
+            **deleted
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete competitor: {str(e)}")
 

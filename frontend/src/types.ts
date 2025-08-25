@@ -9,12 +9,12 @@ export type TabName = 'dashboard' | 'competitors' | 'changes' | 'reports' | 'ana
 export interface Competitor {
   id: string;
   name: string;
-  website: string;
-  category: CompetitorCategory;
+  website?: string;
+  category?: string;
   tracking_urls: string[];
   created_at: Date;
-  status: CompetitorStatus;
-  last_updated: Date;
+  status?: CompetitorStatus;
+  last_updated?: Date;
 }
 
 export interface DashboardOverview {
@@ -46,11 +46,13 @@ export interface DashboardData {
 
 export interface Change {
   id: string;
-  competitor_name: string;
-  change_type: ChangeType;
-  description: string;
+  competitor_name?: string;
+  change_type: string;
+  description?: string;
+  summary?: string;
   detected_at: Date;
-  severity: ChangeSeverity;
+  severity?: ChangeSeverity;
+  url?: string;
 }
 
 export interface Report {

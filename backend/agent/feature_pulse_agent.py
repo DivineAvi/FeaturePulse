@@ -10,7 +10,7 @@ from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
 
 # Import your existing classes
-from manager import LLM
+from llm.manager import LLM
 from database.mongo.manager import DatabaseManager
 from database.mongo.schemas import Competitor, Snapshot, Change, Announcement, Report
 from tools.appstore_tool import AppStoreTool

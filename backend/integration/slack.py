@@ -14,6 +14,9 @@ class SlackWebhook:
         """
         Send a simple text message to Slack
         """
+        if not self.webhook_url:
+            return {"ok": False, "error": "Slack webhook URL not configured"}
+            
         payload = {"text": text}
         try:
             response = requests.post(self.webhook_url, json=payload)
@@ -26,6 +29,9 @@ class SlackWebhook:
         """
         Send a Slack message with blocks
         """
+        if not self.webhook_url:
+            return {"ok": False, "error": "Slack webhook URL not configured"}
+            
         payload = {"blocks": blocks}
         try:
             response = requests.post(self.webhook_url, json=payload)
