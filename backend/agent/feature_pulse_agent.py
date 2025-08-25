@@ -340,9 +340,25 @@ class CompetitorTrackingAgent:
             try:
                 # Compare with previous app version data (simplified)
                 # In a real implementation, you'd store and compare app versions
+                
+                # Get the app store URL from tracking URLs
+                competitor = next(
+                    (c for c in state["competitors"] if c["id"] == app_update["competitor_id"]), 
+                    {}
+                )
+                
+                app_url = ""
+                for tracking_url in competitor.get("tracking_urls", []):
+                    url_str = str(tracking_url)
+                    if (app_update["store"] == "appstore" and "apps.apple.com" in url_str) or \
+                       (app_update["store"] == "playstore" and "play.google.com" in url_str):
+                        app_url = url_str
+                        break
+                
                 detected_changes.append({
                     "competitor_id": app_update["competitor_id"],
                     "change_type": "app",
+                    "url": app_url,
                     "store": app_update["store"],
                     "data": app_update["data"],
                     "timestamp": app_update["timestamp"]
@@ -369,10 +385,11 @@ class CompetitorTrackingAgent:
                 
                 # Prepare analysis prompt
                 if change["change_type"] == "website":
+                    url_display = change.get('url', '') or 'N/A'
                     analysis_prompt = f"""
                     Analyze this website change for competitor {competitor.get('name', 'Unknown')}:
                     
-                    URL: {change['url']}
+                    URL: {url_display}
                     Changes detected:
                     {change['change_details'].get('diff', '')}
                     
@@ -383,11 +400,13 @@ class CompetitorTrackingAgent:
                 
                 elif change["change_type"] == "app":
                     app_data = change["data"]
+                    app_url = change.get('url', '') or 'N/A'
                     analysis_prompt = f"""
                     Analyze this app update for competitor {competitor.get('name', 'Unknown')}:
                     
                     App: {app_data.get('title', 'Unknown')}
                     Version: {app_data.get('version', 'Unknown')}
+                    Store URL: {app_url}
                     Release Notes: {app_data.get('release_notes', 'No notes')}
                     Description: {app_data.get('description', 'No description')[:500]}
                     
@@ -401,24 +420,53 @@ class CompetitorTrackingAgent:
                     system_prompt="You are an expert product analyst. Analyze competitor changes and provide structured insights about product updates, features, and business impact."
                 )
                 
-                analysis_results.append({
+                # Build detailed payload per change for richer reporting later
+                detailed_payload = {
                     "competitor_id": change["competitor_id"],
                     "competitor_name": competitor.get("name", "Unknown"),
                     "change_type": change["change_type"],
-                    "url": change.get("url", ""),
+                    "url": change.get("url", "") or "N/A",
+                    "timestamp": change["timestamp"],
                     "analysis": result["reply"],
-                    "timestamp": change["timestamp"]
-                })
+                }
+                if change["change_type"] == "website":
+                    detailed_payload["details"] = {
+                        "diff": change.get("change_details", {}).get("diff", ""),
+                        "previous_hash": change.get("change_details", {}).get("old_hash", ""),
+                        "new_hash": change.get("change_details", {}).get("new_hash", ""),
+                    }
+                elif change["change_type"] == "app":
+                    app_data = change["data"]
+                    detailed_payload["details"] = {
+                        "store": change.get("store", ""),
+                        "title": app_data.get("title", "Unknown"),
+                        "version": app_data.get("version", "Unknown"),
+                        "release_notes": app_data.get("release_notes", ""),
+                        "description": (app_data.get("description", "") or "")[:1000],
+                    }
+                analysis_results.append(detailed_payload)
                 
                 # Store change in database
-                change_obj = Change(
-                    competitor_id=change["competitor_id"],
-                    url=change.get("url", ""),
-                    change_type="other",  # Will be updated based on AI analysis
-                    summary=result["reply"][:500],
-                    previous_hash=change.get("change_details", {}).get("old_hash", ""),
-                    new_hash=change.get("change_details", {}).get("new_hash", "")
-                )
+                # Only include URL if it's a valid non-empty string
+                change_url = change.get("url", "")
+                if not change_url or change_url.strip() == "":
+                    # Don't include URL field at all if it's empty
+                    change_obj = Change(
+                        competitor_id=change["competitor_id"],
+                        change_type="other",  # Will be updated based on AI analysis
+                        summary=result["reply"][:500],
+                        previous_hash=change.get("change_details", {}).get("old_hash", ""),
+                        new_hash=change.get("change_details", {}).get("new_hash", "")
+                    )
+                else:
+                    change_obj = Change(
+                        competitor_id=change["competitor_id"],
+                        url=change_url,
+                        change_type="other",  # Will be updated based on AI analysis
+                        summary=result["reply"][:500],
+                        previous_hash=change.get("change_details", {}).get("old_hash", ""),
+                        new_hash=change.get("change_details", {}).get("new_hash", "")
+                    )
                 self.tools.db.add_change(change_obj)
                 
             except Exception as e:
@@ -432,7 +480,7 @@ class CompetitorTrackingAgent:
     async def generate_summary(self, state: AgentState) -> AgentState:
         """Generate weekly summary report"""
         try:
-            # Prepare summary data
+            # Prepare summary data (ensure detailed data per change for reporting)
             competitor_summaries = {}
             for analysis in state["analysis_results"]:
                 comp_id = analysis["competitor_id"]
@@ -446,8 +494,11 @@ class CompetitorTrackingAgent:
                 
                 competitor_summaries[comp_id]["changes"].append({
                     "type": analysis["change_type"],
-                    "analysis": analysis["analysis"],
-                    "url": analysis["url"]
+                    "competitor_name": analysis.get("competitor_name", comp_name),
+                    "url": analysis.get("url", "N/A"),
+                    "timestamp": str(analysis.get("timestamp", "")),
+                    "details": analysis.get("details", {}),
+                    "analysis": analysis.get("analysis", ""),
                 })
             
             # Generate comprehensive summary
@@ -456,19 +507,24 @@ class CompetitorTrackingAgent:
             summary_prompt = f"""
             Generate a comprehensive weekly competitor intelligence report for week {current_week}.
             
-            Here's what we detected:
-            
+            Input (JSON):
             {json.dumps(competitor_summaries, indent=2)}
             
-            Create a structured report with:
-            1. Executive Summary - key insights and trends
-            2. Competitor Highlights - significant changes by company
-            3. Feature Updates - new features or product changes
-            4. Pricing & Strategy Changes
-            5. Recommendations - what we should consider based on these insights
+            Produce a structured Markdown report with:
+            1) Executive Summary: key competitive themes and trends.
+            2) Detailed Changes (by competitor):
+               - For each change include: Competitor, Change Type, Timestamp, URL (if any).
+               - For website changes, include a concise diff summary highlighting what changed.
+               - For app updates, include Title, Version, Release Notes (summarize), and notable description changes.
+               - Keep this section factual and specific, focusing on what changed.
+            3) Insights & Implications: interpret the above changes and potential impact.
+            4) Recommendations: concrete next steps for product/GTMP.
             
-            Make it actionable for product managers and executives.
-            Focus on competitive intelligence that could impact our product strategy.
+            Requirements:
+            - Ensure every change is explicitly attributed to its competitor.
+            - Prefer bullet lists with short, information-dense items.
+            - Include links when available.
+            - Avoid fluff; be detailed about the actual changes.
             """
             
             result = self.tools.llm.chat(

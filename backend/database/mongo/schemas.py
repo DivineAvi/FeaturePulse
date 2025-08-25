@@ -30,7 +30,7 @@ class Snapshot(BaseModel):
 class Change(BaseModel):
     id: Optional[str] = None
     competitor_id: str
-    url: HttpUrl
+    url: Optional[HttpUrl] = None
     change_type: Literal["feature", "pricing", "ui", "other"]
     summary: str
     detected_at: datetime = datetime.utcnow()
