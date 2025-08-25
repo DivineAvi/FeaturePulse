@@ -288,7 +288,7 @@ class Crawler:
         if self.playwright:
             await self.playwright.stop()
 
-CRAWLER = Crawler()
+CRAWLER = Crawler(headless=False)
 
 # Example usage:
 async def main():

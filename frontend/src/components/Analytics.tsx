@@ -1,6 +1,6 @@
 import React from 'react';
-import { TrendingUp, BarChart3, PieChart, Activity } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { TrendingUp, BarChart3, Activity } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 import type { Insights } from '../types';
 
 interface AnalyticsProps {
@@ -113,7 +113,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ insights }) => {
                 dataKey="value"
                 label={({ name, value }) => `${name}: ${value}`}
               >
-                {changeTypeData.map((entry, index) => (
+                {changeTypeData.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

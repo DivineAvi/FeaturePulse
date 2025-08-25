@@ -94,7 +94,7 @@ const CompetitorDetailModal: React.FC<CompetitorDetailModalProps> = ({
                   <Activity className="w-4 h-4 text-gray-400" />
                   <span className="text-sm text-gray-600">Last Updated:</span>
                   <span className="text-sm text-gray-900">
-                    {new Date(competitor.last_updated).toLocaleDateString()}
+                    {competitor.last_updated ? new Date(competitor.last_updated).toLocaleDateString() : 'Never'}
                   </span>
                 </div>
                 

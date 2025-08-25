@@ -124,7 +124,7 @@ const Competitors: React.FC<CompetitorsProps> = ({
 
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <Activity className="w-4 h-4" />
-                <span>Last updated {new Date(competitor.last_updated).toLocaleDateString()}</span>
+                <span>Last updated {competitor.last_updated ? new Date(competitor.last_updated).toLocaleDateString() : 'Never'}</span>
               </div>
 
               <div className="pt-3 border-t border-gray-100">

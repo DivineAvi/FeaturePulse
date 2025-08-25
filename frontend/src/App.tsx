@@ -29,7 +29,7 @@ const CompetitorTracker: React.FC = () => {
 
   const addCompetitor = async (competitor: Competitor): Promise<void> => {
     try {
-      const response = await apiService.createCompetitor({
+      await apiService.createCompetitor({
         name: competitor.name,
         website: competitor.website,
         category: competitor.category,
@@ -225,9 +225,15 @@ const CompetitorTracker: React.FC = () => {
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${trackingStatus.status === 'running' ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                <div className={`w-2 h-2 rounded-full ${
+                  trackingStatus.status === 'running' ? 'bg-green-400' : 
+                  trackingStatus.status === 'completed' ? 'bg-blue-400' :
+                  trackingStatus.status === 'error' ? 'bg-red-400' : 'bg-gray-400'
+                }`}></div>
                 <span className="text-sm text-gray-600">
-                  {trackingStatus.status === 'running' ? 'Tracking Active' : 'Tracking Idle'}
+                  {trackingStatus.status === 'running' ? 'Tracking Active' : 
+                   trackingStatus.status === 'completed' ? 'Tracking Completed' :
+                   trackingStatus.status === 'error' ? 'Tracking Error' : 'Tracking Idle'}
                 </span>
               </div>
               <button 

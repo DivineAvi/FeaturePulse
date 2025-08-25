@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, Users, Activity, FileText, Play, Square, AlertTriangle } from 'lucide-react';
+import { Users, Activity, FileText, Play, Square, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import type { DashboardData, TrackingStatusState, Change, TabName } from '../types';
 import apiService from '../services/api';
@@ -56,6 +56,42 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const recentChanges = changes.slice(0, 5);
 
+  // Get tracking status display info
+  const getTrackingStatusInfo = () => {
+    switch (trackingStatus.status) {
+      case 'running':
+        return {
+          text: 'Active',
+          color: 'text-green-600',
+          bgColor: 'bg-green-100',
+          icon: <Activity className="w-6 h-6 text-green-600" />
+        };
+      case 'completed':
+        return {
+          text: 'Completed',
+          color: 'text-blue-600',
+          bgColor: 'bg-blue-100',
+          icon: <CheckCircle className="w-6 h-6 text-blue-600" />
+        };
+      case 'error':
+        return {
+          text: 'Error',
+          color: 'text-red-600',
+          bgColor: 'bg-red-100',
+          icon: <AlertTriangle className="w-6 h-6 text-red-600" />
+        };
+      default:
+        return {
+          text: 'Idle',
+          color: 'text-gray-600',
+          bgColor: 'bg-gray-100',
+          icon: <Clock className="w-6 h-6 text-gray-600" />
+        };
+    }
+  };
+
+  const trackingStatusInfo = getTrackingStatusInfo();
+
   // Show loading state if dashboardData is null
   if (!dashboardData) {
     return (
@@ -83,7 +119,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <p className="text-gray-600">Monitor your competitors and track changes</p>
         </div>
         <div className="flex space-x-3">
-          {trackingStatus.status === 'idle' ? (
+          {trackingStatus.status === 'idle' && (
             <button
               onClick={startTracking}
               className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -91,7 +127,8 @@ const Dashboard: React.FC<DashboardProps> = ({
               <Play className="w-4 h-4" />
               <span>Start Tracking</span>
             </button>
-          ) : (
+          )}
+          {trackingStatus.status === 'running' && (
             <button
               onClick={stopTracking}
               className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
@@ -100,8 +137,67 @@ const Dashboard: React.FC<DashboardProps> = ({
               <span>Stop Tracking</span>
             </button>
           )}
+          {trackingStatus.status === 'completed' && (
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 bg-green-100 text-green-800 px-3 py-2 rounded-lg">
+                <CheckCircle className="w-4 h-4" />
+                <span className="text-sm font-medium">Tracking Completed</span>
+              </div>
+              <button
+                onClick={startTracking}
+                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Play className="w-4 h-4" />
+                <span>Start New Tracking</span>
+              </button>
+            </div>
+          )}
+          {trackingStatus.status === 'error' && (
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 bg-red-100 text-red-800 px-3 py-2 rounded-lg">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="text-sm font-medium">Tracking Session Failed</span>
+              </div>
+              <button
+                onClick={startTracking}
+                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Play className="w-4 h-4" />
+                <span>Retry Tracking</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Tracking Status Banner */}
+      {trackingStatus.status === 'completed' && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center space-x-3">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            <div>
+              <h3 className="text-sm font-medium text-green-800">Tracking Session Completed</h3>
+              <p className="text-sm text-green-700">
+                The competitor tracking session has finished successfully. Check the Changes and Reports sections for the latest updates.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {trackingStatus.status === 'error' && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center space-x-3">
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+            <div>
+              <h3 className="text-sm font-medium text-red-800">Tracking Session Failed</h3>
+              <p className="text-sm text-red-700">
+                The competitor tracking session encountered an error. Please try again or check the system status.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -149,13 +245,13 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-orange-600" />
+            <div className={`p-2 ${trackingStatusInfo.bgColor} rounded-lg`}>
+              {trackingStatusInfo.icon}
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Tracking Status</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {trackingStatus.status === 'running' ? 'Active' : 'Idle'}
+              <p className={`text-2xl font-bold ${trackingStatusInfo.color}`}>
+                {trackingStatusInfo.text}
               </p>
             </div>
           </div>
