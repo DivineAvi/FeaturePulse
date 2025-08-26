@@ -24,6 +24,13 @@ class DatabaseManager:
         self.changes = self.db["Changes"]
         self.announcements = self.db["Announcements"]
         self.reports = self.db["Reports"]
+        
+        # Test connection
+        try:
+            self.client.admin.command('ping')
+            print("DEBUG: MongoDB connection successful")
+        except Exception as e:
+            print(f"DEBUG: MongoDB connection failed: {e}")
 
     def _convert_urls_to_strings(self, data: dict) -> dict:
         """Convert HttpUrl objects to strings for MongoDB storage"""
@@ -79,7 +86,19 @@ class DatabaseManager:
         return str(result.inserted_id)
 
     def get_changes(self, competitor_id: str) -> List[dict]:
+        print(f"DEBUG: Getting changes for competitor_id: {competitor_id}")
         docs = list(self.changes.find({"competitor_id": competitor_id}))
+        print(f"DEBUG: Found {len(docs)} changes for competitor_id: {competitor_id}")
+        for d in docs:
+            d["id"] = str(d["_id"])
+            del d["_id"]
+        return docs
+    
+    def get_all_changes(self) -> List[dict]:
+        """Get all changes from all competitors"""
+        print(f"DEBUG: Getting all changes from collection: {self.changes.name}")
+        docs = list(self.changes.find({}))
+        print(f"DEBUG: Found {len(docs)} documents in changes collection")
         for d in docs:
             d["id"] = str(d["_id"])
             del d["_id"]

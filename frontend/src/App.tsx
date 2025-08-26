@@ -67,7 +67,9 @@ const CompetitorTracker: React.FC = () => {
 
   const fetchChanges = async () => {
     try {
+      console.log('DEBUG: Fetching changes...');
       const data = await apiService.getChanges();
+      console.log('DEBUG: Received changes data:', data);
       setChanges(data);
     } catch (err) {
       console.error('Failed to fetch changes:', err);

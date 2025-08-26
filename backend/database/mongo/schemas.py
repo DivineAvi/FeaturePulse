@@ -32,6 +32,7 @@ class Change(BaseModel):
     competitor_id: str
     url: Optional[HttpUrl] = None
     change_type: Literal["feature", "pricing", "ui", "other"]
+    severity: Literal["high", "medium", "low"] = "medium"
     summary: str
     detected_at: datetime = datetime.utcnow()
     previous_hash: str

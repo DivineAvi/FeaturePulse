@@ -12,6 +12,10 @@ const Changes: React.FC<ChangesProps> = ({ dashboardData, changes }) => {
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date');
 
+  // Debug logging
+  console.log('DEBUG: Changes component received changes:', changes);
+  console.log('DEBUG: Changes component received dashboardData:', dashboardData);
+
   const filteredChanges = changes.filter(change => {
     const matchesType = filterType === 'all' || change.change_type === filterType;
     const matchesSeverity = filterSeverity === 'all' || change.severity === filterSeverity;
